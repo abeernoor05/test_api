@@ -2,12 +2,48 @@ from flask import Flask, request, jsonify, send_from_directory
 import speech_recognition as sr
 import requests
 import os
+import json
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'static/audios'
+INDEX_FILE = 'audio_index.json'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Load existing audio index or start fresh
+if os.path.exists(INDEX_FILE):
+    with open(INDEX_FILE, 'r') as f:
+        audio_index = json.load(f)
+else:
+    audio_index = []
+
+@app.route('/upload-audio', methods=['POST'])
+def upload_audio():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+
+    filename = secure_filename(file.filename)
+    save_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(save_path)
+
+    host = request.host_url.rstrip('/')
+    public_url = f"{host}/static/audios/{filename}"
+
+    entry = {"id": filename, "url": public_url}
+    audio_index.append(entry)
+    with open(INDEX_FILE, 'w') as f:
+        json.dump(audio_index, f)
+
+    return jsonify({'url': public_url})
+
+@app.route('/list-audios', methods=['GET'])
+def list_audios():
+    return jsonify(audio_index)
 
 @app.route('/speech-to-text-url', methods=['POST'])
 def transcribe_audio_url():
@@ -26,24 +62,6 @@ def transcribe_audio_url():
             return jsonify({"text": text})
         except:
             return jsonify({"text": "Could not transcribe"}), 500
-
-@app.route('/upload-audio', methods=['POST'])
-def upload_audio():
-    if 'audio' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
-
-    file = request.files['audio']
-    if file.filename == '':
-        return jsonify({'error': 'Empty filename'}), 400
-
-    filename = secure_filename(file.filename)
-    save_path = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(save_path)
-
-    host = request.host_url.rstrip('/')
-    public_url = f"{host}/static/audios/{filename}"
-
-    return jsonify({'url': public_url})
 
 @app.route('/static/audios/<path:filename>')
 def serve_audio(filename):
