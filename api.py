@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 import speech_recognition as sr
 import requests
+from pydub import AudioSegment
 import os
 import json
 from werkzeug.utils import secure_filename
@@ -59,12 +60,12 @@ def transcribe_audio_url():
         r = sr.Recognizer()
         response = requests.get(audio_url)
 
+        # Save as .3gp
         with open("temp.3gp", "wb") as f:
             f.write(response.content)
 
-        # Convert 3gp to wav
-        audio = AudioSegment.from_file("temp.3gp", format="3gp")
-        audio.export("temp.wav", format="wav")
+        # Use ffmpeg to convert 3gp to wav
+        os.system("ffmpeg -y -i temp.3gp temp.wav")
 
         with sr.AudioFile("temp.wav") as source:
             audio_data = r.record(source)
@@ -76,6 +77,7 @@ def transcribe_audio_url():
         return jsonify({"text": "Could not understand audio"}), 200
     except Exception as e:
         return jsonify({"text": f"Error: {str(e)}"}), 500
+
 
 
 
