@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 import speech_recognition as sr
 import requests
-from pydub import AudioSegment
+
 import os
 import json
 from werkzeug.utils import secure_filename
