@@ -45,6 +45,8 @@ def upload_audio():
 def list_audios():
     return jsonify(audio_index)
 
+from pydub import AudioSegment
+
 @app.route('/speech-to-text-url', methods=['POST'])
 def transcribe_audio_url():
     try:
@@ -56,19 +58,25 @@ def transcribe_audio_url():
 
         r = sr.Recognizer()
         response = requests.get(audio_url)
-        with open("temp.wav", "wb") as f:
+
+        with open("temp.3gp", "wb") as f:
             f.write(response.content)
 
-        with sr.AudioFile("temp.wav") as source:
-            audio = r.record(source)
-            text = r.recognize_google(audio)
+        # Convert 3gp to wav
+        audio = AudioSegment.from_file("temp.3gp", format="3gp")
+        audio.export("temp.wav", format="wav")
 
+        with sr.AudioFile("temp.wav") as source:
+            audio_data = r.record(source)
+
+        text = r.recognize_google(audio_data)
         return jsonify({"text": text})
 
     except sr.UnknownValueError:
-        return jsonify({"text": "Could not understand audio"}), 500
+        return jsonify({"text": "Could not understand audio"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"text": f"Error: {str(e)}"}), 500
+
 
 
 @app.route('/static/audios/<path:filename>')
