@@ -46,7 +46,7 @@ def upload_audio():
 def list_audios():
     return jsonify(audio_index)
 
-from pydub import AudioSegment
+
 
 @app.route('/speech-to-text-url', methods=['POST'])
 def transcribe_audio_url():
