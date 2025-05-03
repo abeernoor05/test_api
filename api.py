@@ -47,21 +47,29 @@ def list_audios():
 
 @app.route('/speech-to-text-url', methods=['POST'])
 def transcribe_audio_url():
-    data = request.get_json()
-    audio_url = data.get("url")
+    try:
+        data = request.get_json()
+        audio_url = data.get("url")
 
-    r = sr.Recognizer()
-    response = requests.get(audio_url)
-    with open("temp.wav", "wb") as f:
-        f.write(response.content)
+        if not audio_url:
+            return jsonify({"error": "Missing URL"}), 400
 
-    with sr.AudioFile("temp.wav") as source:
-        audio = r.record(source)
-        try:
+        r = sr.Recognizer()
+        response = requests.get(audio_url)
+        with open("temp.wav", "wb") as f:
+            f.write(response.content)
+
+        with sr.AudioFile("temp.wav") as source:
+            audio = r.record(source)
             text = r.recognize_google(audio)
-            return jsonify({"text": text})
-        except:
-            return jsonify({"text": "Could not transcribe"}), 500
+
+        return jsonify({"text": text})
+
+    except sr.UnknownValueError:
+        return jsonify({"text": "Could not understand audio"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/static/audios/<path:filename>')
 def serve_audio(filename):
